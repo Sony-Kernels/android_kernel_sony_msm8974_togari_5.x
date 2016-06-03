@@ -3983,6 +3983,13 @@ static long qseecom_ioctl(struct file *file, unsigned cmd,
 				qseecom.qsee_version);
 			return -EINVAL;
 		}
+		data->type = QSEECOM_SECURE_SERVICE;
+		if (data->type != QSEECOM_GENERIC) {
+			pr_err("send cmd svc req: invalid handle (%d)\n",
+				data->type);
+			ret = -EINVAL;
+			break;
+		}
 		mutex_lock(&app_access_lock);
 		atomic_inc(&data->ioctl_count);
 		ret = qseecom_send_service_cmd(data, argp);
