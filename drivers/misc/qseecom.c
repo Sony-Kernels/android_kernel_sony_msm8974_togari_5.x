@@ -724,6 +724,9 @@ static int qseecom_set_client_mem_param(struct qseecom_dev_handle *data,
 	/* Copy the relevant information needed for loading the image */
 	if (copy_from_user(&req, (void __user *)argp, sizeof(req)))
 		return -EFAULT;
+	if (!access_ok(VERIFY_WRITE, (void __user *)req.virt_sb_base,
+			req.sb_len))
+		return -EFAULT;
 
 	if ((req.ifd_data_fd <= 0) || (req.virt_sb_base == 0) ||
 					(req.sb_len == 0)) {
@@ -1750,7 +1753,23 @@ static int qseecom_send_modfd_cmd(struct qseecom_dev_handle *data,
 		pr_err("copy_from_user failed\n");
 		return ret;
 	}
+	if (req.cmd_req_buf == NULL || req.resp_buf == NULL) {
+		pr_err("cmd buffer or response buffer is null\n");
+		return -EINVAL;
+	}
+	if (((uint32_t)req.cmd_req_buf < data->client.user_virt_sb_base) ||
+		((uint32_t)req.cmd_req_buf >= (data->client.user_virt_sb_base +
+					data->client.sb_length))) {
+		pr_err("cmd buffer address not within shared bufffer\n");
+		return -EINVAL;
+	}
 
+	if (((uint32_t)req.resp_buf < data->client.user_virt_sb_base)  ||
+		((uint32_t)req.resp_buf >= (data->client.user_virt_sb_base +
+					data->client.sb_length))){
+		pr_err("response buffer address not within shared bufffer\n");
+		return -EINVAL;
+	}
 	if (req.cmd_req_len == 0 || req.cmd_req_len > data->client.sb_length ||
 			req.resp_len > data->client.sb_length) {
 		pr_err("cmd or response buffer length not valid\n");
